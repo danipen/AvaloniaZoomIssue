@@ -5,6 +5,7 @@ using Avalonia.Animation;
 using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Layout;
 
@@ -35,6 +36,16 @@ namespace AvaloniaZoomIssue
         internal ImageContentView(IImageView imageView)
         {
             BuildComponents(imageView);
+
+            Transitions = new()
+            {
+                new DoubleTransition
+                {
+                    Duration = mDefaultZoomAnimationDuration,
+                    Property = ZoomLevelProperty,
+                    Easing = new CubicEaseOut(),
+                }
+            };
         }
 
         internal void InitZoom(double zoomLevel)
@@ -46,34 +57,22 @@ namespace AvaloniaZoomIssue
 
         internal void ZoomIn()
         {
-            AnimateZoomLevel(
-                ZoomLevel,
-                ZoomLevel + ZOOM_STEP,
-                mDefaultZoomAnimationDuration);
+            ZoomLevel += ZOOM_STEP;
         }
 
         internal void ZoomOut()
         {
-            AnimateZoomLevel(
-                ZoomLevel,
-                ZoomLevel - ZOOM_STEP,
-                mDefaultZoomAnimationDuration);
+            ZoomLevel = Math.Max(ZoomLevel - ZOOM_STEP, MIN_ZOOM_LEVEL);
         }
 
         internal void ZoomOneToOne()
         {
-            AnimateZoomLevel(
-                ZoomLevel,
-                1,
-                mDefaultZoomAnimationDuration);
+            ZoomLevel = 1;
         }
 
         internal void ZoomToValue(double value)
         {
-            AnimateZoomLevel(
-                ZoomLevel,
-                value,
-                mDefaultZoomAnimationDuration);
+            ZoomLevel = value;
         }
 
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -82,7 +81,6 @@ namespace AvaloniaZoomIssue
 
             if (change.Property == ZoomLevelProperty)
             {
-                ZoomLevel = change.GetNewValue<double>();
                 OnZoomLevelChanged(change.GetNewValue<double>());
             }
         }
@@ -123,22 +121,6 @@ namespace AvaloniaZoomIssue
             mIsDragging = false;
         }
 
-        void AnimateZoomLevel(double from, double to, TimeSpan duration)
-        {
-            if (to < MIN_ZOOM_LEVEL)
-                to = MIN_ZOOM_LEVEL;
-
-            DoubleTransition doubleTransition = new DoubleTransition();
-            doubleTransition.Duration = duration;
-            doubleTransition.Property = ZoomLevelProperty;
-            doubleTransition.Easing = new CubicEaseOut();
-
-            doubleTransition.Apply(
-                this, Clock ?? AvaloniaLocator.Current.GetService<IGlobalClock>(),
-                from,
-                to);
-        }
-
         void OnZoomLevelChanged(double zoomLevel)
         {
             SetupImageSize(zoomLevel);
@@ -149,7 +131,6 @@ namespace AvaloniaZoomIssue
             Size targetSize = new Size(
                 mImageView.ImageSize.Width * zoomLevel, mImageView.ImageSize.Height * zoomLevel);
 
-            mImageView.SetZoomLevel(zoomLevel);
             mImageView.Size = targetSize;
         }
 
